@@ -2,7 +2,7 @@
 # requirements
 # requests, feedparser, traceback, Pillow
 
-from tkinter import *
+from Tkinter import *
 import locale
 import threading
 import time
@@ -10,6 +10,7 @@ import requests
 import json
 import traceback
 import feedparser
+import anniv
 
 from PIL import Image, ImageTk
 from contextlib import contextmanager
@@ -23,8 +24,8 @@ news_country_code = 'us'
 weather_api_token = '3b0d0d5b88ac72b20e15576228ddf08f' # create account at https://darksky.net/dev/
 weather_lang = 'en' # see https://darksky.net/dev/docs/forecast for full list of language parameters values
 weather_unit = 'us' # see https://darksky.net/dev/docs/forecast for full list of unit parameters values
-latitude = '35.960636'# Set this if IP location lookup does not work for you (must be a string)
-longitude = '-83.920738'# Set this if IP location lookup does not work for you (must be a string)
+latitude = '35.960636' # Set this if IP location lookup does not work for you (must be a string)
+longitude = '-83.920738' # Set this if IP location lookup does not work for you (must be a string)
 xlarge_text_size = 94
 large_text_size = 48
 medium_text_size = 28
@@ -73,6 +74,10 @@ class Clock(Frame):
         self.date1 = ''
         self.dateLbl = Label(self, text=self.date1, font=('Helvetica', small_text_size), fg="white", bg="black")
         self.dateLbl.pack(side=TOP, anchor=E)
+        # initialize days since
+        self.since1 = ''
+        self.dayssince = Label(self, text=self.since1, font=('Helvetica', small_text_size), fg="white", bg="black")
+        self.dayssince.pack(side=TOP, anchor=E)
         self.tick()
 
     def tick(self):
@@ -84,6 +89,7 @@ class Clock(Frame):
 
             day_of_week2 = time.strftime('%A')
             date2 = time.strftime(date_format)
+            since2 = anniv.timesince()
             # if time string has changed, update it
             if time2 != self.time1:
                 self.time1 = time2
@@ -94,6 +100,9 @@ class Clock(Frame):
             if date2 != self.date1:
                 self.date1 = date2
                 self.dateLbl.config(text=date2)
+            if since2 != self.since1:
+                self.since1 = since2
+                self.dayssince.config(text = since2)
             # calls itself every 200 milliseconds
             # to update the time display as needed
             # could use >200 ms, but display gets jerky
@@ -116,7 +125,7 @@ class Weather(Frame):
         self.iconLbl.pack(side=LEFT, anchor=N, padx=20)
         self.currentlyLbl = Label(self, font=('Helvetica', medium_text_size), fg="white", bg="black")
         self.currentlyLbl.pack(side=TOP, anchor=W)
-        self.forecastLbl = Label(self, font=('Helvetica', small_text_size), fg="white", bg="black")
+        self.forecastLbl = Label(self, font=('Helvetica', small_text_size), wraplength=325, justify = LEFT, fg="white", bg="black")
         self.forecastLbl.pack(side=TOP, anchor=W)
         self.locationLbl = Label(self, font=('Helvetica', small_text_size), fg="white", bg="black")
         self.locationLbl.pack(side=TOP, anchor=W)
@@ -212,52 +221,27 @@ class News(Frame):
     def __init__(self, parent, *args, **kwargs):
         Frame.__init__(self, parent, *args, **kwargs)
         self.config(bg='black')
-        self.title = 'News' # 'News' is more internationally generic
+        self.title = 'Daily Quotes:'
         self.newsLbl = Label(self, text=self.title, font=('Helvetica', medium_text_size), fg="white", bg="black")
         self.newsLbl.pack(side=TOP, anchor=W)
-        self.headlinesContainer = Frame(self, bg="black")
-        self.headlinesContainer.pack(side=TOP)
+        self.quote = anniv.dailyquote()
+        self.quoteLbl = Label(self, text=self.quote , font=('Helvetica', small_text_size), fg="white", bg="black", justify = LEFT, wraplength = 650)
+        self.quoteLbl.pack(side=TOP, anchor=W)
+        self.jesus = anniv.dailyjesus()
+        self.jesusLbl = Label(self, text=self.jesus , font=('Helvetica', small_text_size), fg="white", bg="black", justify = LEFT, wraplength = 650 )
+        self.jesusLbl.pack(side=TOP, anchor=W)
         self.get_headlines()
 
     def get_headlines(self):
-        try:
-            # remove all children
-            for widget in self.headlinesContainer.winfo_children():
-                widget.destroy()
-            if news_country_code == None:
-                headlines_url = "https://news.google.com/news?ned=us&output=rss"
-            else:
-                headlines_url = "https://news.google.com/news?ned=%s&output=rss" % news_country_code
-
-            feed = feedparser.parse(headlines_url)
-
-            for post in feed.entries[0:5]:
-                headline = NewsHeadline(self.headlinesContainer, post.title)
-                headline.pack(side=TOP, anchor=W)
-        except Exception as e:
-            traceback.print_exc()
-            print("Error: %s. Cannot get news." % e)
-
+        quote2 = anniv.dailyquote()
+        jesus2 = anniv.dailyjesus()
+        if quote2 != self.quote:
+            self.quote = quote2
+            self.quoteLbl.config(text=quote2)
+        if jesus2 != self.jesus:
+            self.jesus = jesus2
+            self.jesusLbl.config(text=jesus2)
         self.after(600000, self.get_headlines)
-
-
-class NewsHeadline(Frame):
-    def __init__(self, parent, event_name=""):
-        Frame.__init__(self, parent, bg='black')
-
-        image = Image.open("assets/Newspaper.png")
-        image = image.resize((25, 25), Image.ANTIALIAS)
-        image = image.convert('RGB')
-        photo = ImageTk.PhotoImage(image)
-
-        self.iconLbl = Label(self, bg='black', image=photo)
-        self.iconLbl.image = photo
-        self.iconLbl.pack(side=LEFT, anchor=N)
-
-        self.eventName = event_name
-        self.eventNameLbl = Label(self, text=self.eventName, font=('Helvetica', small_text_size), fg="white", bg="black")
-        self.eventNameLbl.pack(side=LEFT, anchor=N)
-
 
 class Calendar(Frame):
     def __init__(self, parent, *args, **kwargs):
@@ -304,13 +288,14 @@ class FullscreenWindow:
         self.tk.bind("<Escape>", self.end_fullscreen)
         # clock
         self.clock = Clock(self.topFrame)
-        self.clock.pack(side=RIGHT, anchor=N, padx=100, pady=60)
+        self.clock.pack(side=RIGHT, anchor=N, padx=25, pady=60)
         # weather
         self.weather = Weather(self.topFrame)
-        self.weather.pack(side=LEFT, anchor=N, padx=100, pady=60)
+        self.weather.pack(side=LEFT, anchor=N, padx=25, pady=60)
         # news
         self.news = News(self.bottomFrame)
-        self.news.pack(side=LEFT, anchor=S, padx=100, pady=60)
+        self.news.pack(side=LEFT, anchor=S, padx=25, pady=60)
+        self.tk.attributes("-fullscreen", True)
         # calender - removing for now
         # self.calender = Calendar(self.bottomFrame)
         # self.calender.pack(side = RIGHT, anchor=S, padx=100, pady=60)
@@ -324,6 +309,7 @@ class FullscreenWindow:
         self.state = False
         self.tk.attributes("-fullscreen", False)
         return "break"
+
 
 if __name__ == '__main__':
     w = FullscreenWindow()
